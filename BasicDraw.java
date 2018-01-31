@@ -49,7 +49,6 @@ public class BasicDraw extends Application
         c = new Canvas(600,600);
         currentFile = null;
         isSaved = false; //TODO:  Decide this thing's ultimate fate
-        currentFile = null;
     }
     @Override
     public void init()
@@ -218,13 +217,12 @@ public class BasicDraw extends Application
     {
         FileChooser fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extFilter =
-            new FileChooser.ExtensionFilter(".dwg files (*.dwg)", "*.dwg");
+            new FileChooser.ExtensionFilter(".dwg file (*.dwg)", "*.dwg");
         fileChooser.getExtensionFilters().add(extFilter);
         currentFile = fileChooser.showSaveDialog(primary);
     }
     private void writeFileToDisk()
     {
-<<<<<<< HEAD
         try
         {
           ObjectOutputStream oos =
@@ -237,46 +235,6 @@ public class BasicDraw extends Application
           System.err.println("An IOException has occured.");
           ex.printStackTrace();
         }
-=======
-        public static void main(String[] args)
-          {
-            //save objects into a file
-            //  FileInputStream
-            //  FileOutputStream
-            //  ObjectInputStream
-            //  ObjectOutputStream
-            try
-            {
-              ObjectOutputStream oos =
-                new ObjectOutputStream(new FileOutputStream(new File("test.foo")));
-              SerializableColor sc = new SerializableColor(Color.rgb(255,0,0));
-              oos.writeInt(red);
-              oos.writeInt(green);
-              oos.writeInt(blue);
-              oos.writeDouble(alpha);
-              oos.close();
-              ObjectInputStream ois =
-                new ObjectInputStream(new FileInputStream(new File("test.foo")));
-              int r = oos.readInt(red);
-              int g = oos.readInt(green);
-              int b = oos.readInt(blue);
-              int a = oos.readDouble(alpha);
-              SerializableColor c = new SerializableColor(r, g, b, a);
-              System.out.println("The color is");
-              System.out.println(c);
-            }
-            catech(IOException ex)
-            {
-              System.out.println("Mooned by IO");
-              ex.printStackTrace;
-            }
-            catch(ClassNotFoundException ex)
-            {
-              System.out.println("Class not found.");
-              ex.printStackTrace;
-            }
-          }
->>>>>>> 0128616c8e6d0736fa8ab5a6231153447bf501b3
     }
     private void readFileFromDisk()
     {
