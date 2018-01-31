@@ -226,8 +226,44 @@ public class BasicDraw extends Application
     }
     private void writeFileToDisk()
     {
-        //save the current drawing to disk.
-        //
+        public static void main(String[] args)
+          {
+            //save objects into a file
+            //  FileInputStream
+            //  FileOutputStream
+            //  ObjectInputStream
+            //  ObjectOutputStream
+            try
+            {
+              ObjectOutputStream oos =
+                new ObjectOutputStream(new FileOutputStream(new File("test.foo")));
+              SerializableColor sc = new SerializableColor(Color.rgb(255,0,0));
+              oos.writeInt(red);
+              oos.writeInt(green);
+              oos.writeInt(blue);
+              oos.writeDouble(alpha);
+              oos.close();
+              ObjectInputStream ois =
+                new ObjectInputStream(new FileInputStream(new File("test.foo")));
+              int r = oos.readInt(red);
+              int g = oos.readInt(green);
+              int b = oos.readInt(blue);
+              int a = oos.readDouble(alpha);
+              SerializableColor c = new SerializableColor(r, g, b, a);
+              System.out.println("The color is");
+              System.out.println(c);
+            }
+            catech(IOException ex)
+            {
+              System.out.println("Mooned by IO");
+              ex.printStackTrace;
+            }
+            catch(ClassNotFoundException ex)
+            {
+              System.out.println("Class not found.");
+              ex.printStackTrace;
+            }
+          }
     }
     private void readFileFromDisk()
     {
