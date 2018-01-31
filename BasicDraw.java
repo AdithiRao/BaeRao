@@ -38,7 +38,6 @@ public class BasicDraw extends Application
     private File currentFile;
     private boolean isSaved;
 
-
     public BasicDraw()
     {
         drawing = new ArrayList<>();
@@ -50,6 +49,7 @@ public class BasicDraw extends Application
         c = new Canvas(600,600);
         currentFile = null;
         isSaved = false; //TODO:  Decide this thing's ultimate fate
+        currentFile = null;
     }
     @Override
     public void init()
@@ -102,7 +102,7 @@ public class BasicDraw extends Application
         saveItem.setOnAction( e ->
         {
             //If the file is null, choose a file
-            if(file == null)
+            if(currentFile == null)
             {
                 chooseFile();
             }
@@ -123,8 +123,7 @@ public class BasicDraw extends Application
         asDWG.setOnAction( e ->
         {
             chooseFile();
-            //choose a file
-            //write it to disk
+            writeFileToDisk();
         });
         asPNG.setOnAction( e ->
         {
@@ -132,7 +131,7 @@ public class BasicDraw extends Application
         });
         asJPEG.setOnAction( e ->
         {
-            saveCanvasToFileType("jpg");    
+            saveCanvasToFileType("jpg");
         });
         asGIF.setOnAction( e ->
         {
@@ -158,13 +157,13 @@ public class BasicDraw extends Application
         ColorMenuItem uncItem = new ColorMenuItem("Commie Hill", Color.rgb(0x99, 0xBA, 0xDD));
         ColorMenuItem ncsuItem = new ColorMenuItem("Rigor Mortis", Color.rgb(0xcc, 0, 0));
         colorMenu.getItems().addAll(dookItem, uncItem, ncsuItem );
-        
+
         Menu bgMenu = new Menu("Background");
         BgMenuItem dookBgItem = new BgMenuItem("Dook", Color.rgb(0, 0x1A, 0x57));
         BgMenuItem uncBgItem = new BgMenuItem("Commie Hill", Color.rgb(0x99, 0xBA, 0xDD));
         BgMenuItem ncsuBgItem = new BgMenuItem("Rigor Mortis", Color.rgb(0xcc, 0, 0));
         bgMenu.getItems().addAll(dookBgItem, uncBgItem, ncsuBgItem);
-        
+
         Menu widthMenu = new Menu("Width");
         WidthMenuItem one = new WidthMenuItem(1);
         WidthMenuItem two = new WidthMenuItem(2);
@@ -181,53 +180,62 @@ public class BasicDraw extends Application
     private void saveCanvasToFileType(String type)
     {
         FileChooser fileChooser = new FileChooser();
-         
-        FileChooser.ExtensionFilter extFilter = 
-            new FileChooser.ExtensionFilter(String.format("%s files (*.%s)",type, type), 
+
+        FileChooser.ExtensionFilter extFilter =
+            new FileChooser.ExtensionFilter(String.format("%s files (*.%s)",type, type),
                 String.format("*.%s", type));
         fileChooser.getExtensionFilters().add(extFilter);
-       
-        File file = fileChooser.showSaveDialog(primary);
-         
-        if(file != null){
+
+        currentFile = fileChooser.showSaveDialog(primary);
+
+        if(currentFile != null){
             try
             {
-                WritableImage writableImage = 
+                WritableImage writableImage =
                     new WritableImage((int)c.getWidth(), (int)c.getHeight());
                 c.snapshot(null, writableImage);
                 if(type.equals("jpg"))
                 {
-                     BufferedImage bImage = SwingFXUtils.fromFXImage(writableImage, null);
-                    BufferedImage bImage2 = new BufferedImage(bImage.getWidth(), 
+                    BufferedImage bImage = SwingFXUtils.fromFXImage(writableImage, null);
+                    BufferedImage bImage2 = new BufferedImage(bImage.getWidth(),
                             bImage.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
                     bImage2.getGraphics().drawImage(bImage, 0, 0, null);
-                    ImageIO.write(bImage2, type, file);
+                    ImageIO.write(bImage2, type, currentFile);
                     return;
                 }
-                RenderedImage renderedImage 
+                RenderedImage renderedImage
                     = SwingFXUtils.fromFXImage(writableImage, null);
-                ImageIO.write(renderedImage, type, file);
-            } 
-            catch (IOException ex) 
+                ImageIO.write(renderedImage, type, currentFile);
+            }
+            catch (IOException ex)
             {
                 ex.printStackTrace();
             }
- 
+
         }
     }
     private void chooseFile()
     {
         FileChooser fileChooser = new FileChooser();
-         
-        FileChooser.ExtensionFilter extFilter = 
+        FileChooser.ExtensionFilter extFilter =
             new FileChooser.ExtensionFilter(".dwg files (*.dwg)", "*.dwg");
         fileChooser.getExtensionFilters().add(extFilter);
-        File file = fileChooser.showSaveDialog(primary);
+        currentFile = fileChooser.showSaveDialog(primary);
     }
     private void writeFileToDisk()
     {
-        //save the current drawing to disk.
-        //
+        try
+        {
+          ObjectOutputStream oos =
+          new ObjectOutputStream(new FileOutputStream(currentFile));
+          oos.writeObject(drawing);
+          oos.close();
+        }
+        catch(IOException ex)
+        {
+          System.err.println("An IOException has occured.");
+          ex.printStackTrace();
+        }
     }
     private void readFileFromDisk()
     {
@@ -243,7 +251,7 @@ public class BasicDraw extends Application
             setOnAction(e ->
             {
                 currentColor = color;
-            });        
+            });
         }
     }
     class BgMenuItem extends MenuItem
@@ -257,7 +265,7 @@ public class BasicDraw extends Application
             {
                 background = color;
                 refresh();
-            });        
+            });
         }
     }
     class WidthMenuItem extends MenuItem
@@ -270,7 +278,7 @@ public class BasicDraw extends Application
             setOnAction(e ->
             {
                 currentWidth = width;
-            });        
+            });
         }
     }
     public static void main(String[] args)
