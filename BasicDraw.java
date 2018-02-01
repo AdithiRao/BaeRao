@@ -25,10 +25,17 @@ import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.collections.ObservableList;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+
 public class BasicDraw extends Application
 {
     private Stage primary;
     private ArrayList<Curve> drawing;
+    private ObservableList<Curve> observeDrawing;
     private Curve currentCurve;
     private Color background;
     private Color currentColor;
@@ -41,6 +48,7 @@ public class BasicDraw extends Application
     public BasicDraw()
     {
         drawing = new ArrayList<>();
+        observeDrawing = FXCollections.observableArrayList();
         background = Color.WHITE;
         currentColor = Color.BLACK;
         currentWidth = 10;
@@ -48,8 +56,7 @@ public class BasicDraw extends Application
         mbar = new MenuBar();
         c = new Canvas(600,600);
         currentFile = null;
-        isSaved = false; //TODO:  Decide this thing's ultimate fate
-        currentFile = null;
+        isSaved = true;
     }
     @Override
     public void init()
@@ -59,6 +66,24 @@ public class BasicDraw extends Application
     public void start(Stage primary)
     {
         this.primary = primary;
+        observeDrawing.addListener(new ListChangeListener<Curve>()
+        {
+          @Override
+          public void onChanged(ListChangeListener.Change c)
+          {
+            while(c.next())
+            {
+              if(c.wasAdded())
+              {
+                isSaved = false;
+              }
+              if (c.wasRemoved())
+              {
+                isSaved = false;
+              }
+            }
+          }
+        });
         BorderPane bp = new BorderPane();
         bp.setCenter(c);
         bp.setTop(mbar);
@@ -73,6 +98,7 @@ public class BasicDraw extends Application
         {
             currentCurve = new Curve(currentColor, currentWidth);
             drawing.add(currentCurve);
+            observeDrawing.add(currentCurve);
             currentCurve.add(new Point(e.getX(), e.getY()));
         });
         buildMenus();
@@ -82,6 +108,10 @@ public class BasicDraw extends Application
     @Override
     public void stop()
     {
+      if(!isSaved && offerToSave())
+      {
+        writeFileToDisk();
+      }
     }
     private void refresh()
     {
@@ -97,61 +127,87 @@ public class BasicDraw extends Application
     {
         Menu fileMenu = new Menu("File");
         MenuItem newItem = new MenuItem("New");
+        newItem.setOnAction(e->
+        {
+          if(!isSaved)
+          {
+            if(offerToSave())
+            {
+              writeFileToDisk();
+            }
+          }
+          drawing.clear();
+          observeDrawing.clear();
+          background=Color.WHITE;
+          refresh();
+        });
         MenuItem openItem = new MenuItem("Open...");
+        openItem.setOnAction(e ->
+        {
+          if(!isSaved)
+          {
+            if(offerToSave())
+            {
+              writeFileToDisk();
+            }
+          }
+          readFileFromDisk();
+        });
         MenuItem saveItem = new MenuItem("Save");
         saveItem.setOnAction( e ->
         {
-            //If the file is null, choose a file
             if(currentFile == null)
             {
                 chooseFile();
             }
-            //write file to disk
+            writeFileToDisk();
         });
         Menu saveAsItem = new Menu("Save As...");
-        MenuItem quitItem = new MenuItem("Quit");
-        fileMenu.getItems().addAll(newItem, openItem, saveItem, saveAsItem, quitItem);
         MenuItem asDWG = new MenuItem("DWG");
         MenuItem asGIF = new MenuItem("GIF");
         MenuItem asPNG = new MenuItem("PNG");
         MenuItem asJPEG = new MenuItem("JPEG");
         saveAsItem.getItems().addAll(asDWG, asGIF, asPNG, asJPEG);
-        quitItem.setOnAction( e -> Platform.exit());
-        Menu editMenu = new Menu("Edit");
-        MenuItem clearItem = new MenuItem("Clear");
-        MenuItem undoItem = new MenuItem("Undo Last Curve");
         asDWG.setOnAction( e ->
         {
-            chooseFile();
-            writeFileToDisk();
+          chooseFile();
+          writeFileToDisk();
         });
         asPNG.setOnAction( e ->
         {
-            saveCanvasToFileType("png");
+          saveCanvasToFileType("png");
         });
         asJPEG.setOnAction( e ->
         {
-            saveCanvasToFileType("jpg");
+          saveCanvasToFileType("jpg");
         });
         asGIF.setOnAction( e ->
         {
-            saveCanvasToFileType("gif");
+          saveCanvasToFileType("gif");
         });
+        MenuItem quitItem = new MenuItem("Quit");
+        quitItem.setOnAction( e -> Platform.exit());
+        fileMenu.getItems().addAll(newItem, openItem, saveItem, saveAsItem, quitItem);
+
+        Menu editMenu = new Menu("Edit");
+        MenuItem clearItem = new MenuItem("Clear");
+        MenuItem undoItem = new MenuItem("Undo Last Curve");
         editMenu.getItems().addAll(undoItem, clearItem);
         clearItem.setOnAction( e ->
         {
-            drawing.clear();
-            background=Color.WHITE;
-            refresh();
+          drawing.clear();
+          background=Color.WHITE;
+          refresh();
         });
         undoItem.setOnAction( e ->
         {
-            if(drawing.size() > 0)
-            {
-                drawing.remove(drawing.size() - 1);
-            }
-            refresh();
+          if(drawing.size() > 0)
+          {
+            drawing.remove(drawing.size() - 1);
+          }
+          refresh();
         });
+
         Menu colorMenu = new Menu("Color");
         ColorMenuItem dookItem = new ColorMenuItem("Dook", Color.rgb(0, 0x1A, 0x57));
         ColorMenuItem uncItem = new ColorMenuItem("Commie Hill", Color.rgb(0x99, 0xBA, 0xDD));
@@ -211,16 +267,24 @@ public class BasicDraw extends Application
             {
                 ex.printStackTrace();
             }
-
         }
     }
     private void chooseFile()
     {
         FileChooser fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extFilter =
-            new FileChooser.ExtensionFilter(".dwg files (*.dwg)", "*.dwg");
+            new FileChooser.ExtensionFilter(".dwg file (*.dwg)", "*.dwg");
         fileChooser.getExtensionFilters().add(extFilter);
         currentFile = fileChooser.showSaveDialog(primary);
+    }
+    private boolean offerToSave()
+    {
+      Alert box = new Alert(Alert.AlertType.CONFIRMATION,
+        "Do you want to save window contents?",
+        ButtonType.YES, ButtonType.NO);
+      box.setTitle("Wait");
+      box.showAndWait();
+      return box.getResult().equals(ButtonType.YES);
     }
     private void writeFileToDisk()
     {
@@ -239,8 +303,25 @@ public class BasicDraw extends Application
     }
     private void readFileFromDisk()
     {
+      FileChooser fc = new FileChooser();
+      currentFile = fc.showOpenDialog(primary);
+      try
+      {
+        ObjectInputStream ois =
+          new ObjectInputStream(new FileInputStream(currentFile));
+        drawing = (ArrayList<Curve>) ois.readObject();
+      }
+      catch(IOException ex)
+      {
+        System.err.println("An IOException has occurred.");
+        ex.printStackTrace();
+      }
+      catch(ClassNotFoundException ex)
+      {
+        System.out.println("Class not found.");
+        ex.printStackTrace();
+      }
     }
-
     class ColorMenuItem extends MenuItem
     {
         private final Color color;
